@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Break-even">
+<title>Break-even calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2f4f1; --surface:#ffffff; --ink:#15181b; --mute:#657067; --line:#d8ddd7;
+  --red:#c0352b; --redbg:#fbeae7; --green:#17803f; --greenbg:#e2f3e7;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1210; --surface:#171b18; --ink:#eef1ed; --mute:#98a39a; --line:#2b322d;
+    --red:#ff6b5e; --redbg:#2a1715; --green:#4fd382; --greenbg:#13281b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1210; --surface:#171b18; --ink:#eef1ed; --mute:#98a39a; --line:#2b322d;
+  --red:#ff6b5e; --redbg:#2a1715; --green:#4fd382; --greenbg:#13281b;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; min-height:100%; background:var(--bg); color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-variant-numeric:tabular-nums; -webkit-text-size-adjust:100%;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+main{max-width:480px;margin:0 auto;padding:22px 18px 40px}
+h1{font-size:1.05rem;font-weight:700;margin:0 0 18px;color:var(--mute);letter-spacing:.01em}
+
+.field{
+  background:var(--redbg); border:2px solid var(--red); border-radius:18px;
+  padding:14px 18px 10px; display:block;
+}
+.field span.lbl{display:block;font-size:.95rem;font-weight:700;color:var(--red)}
+.row{display:flex;align-items:baseline;gap:6px}
+.field input{
+  flex:1; min-width:0; width:100%; border:0; outline:0; background:transparent;
+  font:900 3.6rem/1.1 "Archivo",system-ui,sans-serif; color:var(--red);
+  font-variant-numeric:tabular-nums; padding:0; margin:0;
+}
+.field input::placeholder{color:var(--red);opacity:.35}
+.field .pct{font-weight:900;font-size:2.4rem;color:var(--red)}
+.field:focus-within{box-shadow:0 0 0 4px color-mix(in srgb,var(--red) 25%,transparent)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;margin:0 -18px;padding-left:18px;padding-right:18px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:none; border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
+  font:700 1rem "Archivo",system-ui,sans-serif; border-radius:999px; padding:9px 16px; cursor:pointer;
+}
+.chip:active{transform:scale(.96)}
+.chip:focus-visible,.cell:focus-visible,.field input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+.result{
+  margin-top:14px; background:var(--greenbg); border:2px solid var(--green);
+  border-radius:18px; padding:16px 18px 18px;
+}
+.result .lbl{display:block;font-size:.95rem;font-weight:700;color:var(--green)}
+.big{font:900 clamp(2.6rem,15vw,4.2rem)/1.1 "Archivo",system-ui,sans-serif;color:var(--green);word-break:break-all;margin-top:2px}
+.detail{margin:10px 0 0;font-size:1rem;line-height:1.45;color:var(--ink)}
+.detail:empty{display:none}
+.result.idle{background:var(--surface);border-color:var(--line)}
+.result.idle .lbl,.result.idle .big{color:var(--mute)}
+.result.bad{background:var(--redbg);border-color:var(--red)}
+.result.bad .lbl,.result.bad .big{color:var(--red)}
+.result.bad .big{font-size:1.9rem}
+
+h2{font-size:1.05rem;font-weight:700;margin:30px 0 10px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cell{
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  background:var(--surface);border:1.5px solid var(--line);border-radius:12px;
+  padding:11px 14px;font:500 1rem "Archivo",system-ui,sans-serif;color:var(--ink);cursor:pointer;text-align:left;
+}
+.cell .d{color:var(--red);font-weight:700}
+.cell .g{color:var(--green);font-weight:700}
+.cell.on{border-color:var(--ink)}
+.note{margin:18px 0 0;font-size:.9rem;line-height:1.5;color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Break-even calculator</h1>
+
+  <label class="field" for="down">
+    <span class="lbl">I’m down</span>
+    <span class="row">
+      <input id="down" type="text" inputmode="decimal" autocomplete="off" aria-describedby="out">
+      <span class="pct" aria-hidden="true">%</span>
+    </span>
+  </label>
+
+  <div class="chips" id="chips" aria-label="Quick picks"></div>
+
+  <section class="result idle" id="result" aria-live="polite">
+    <span class="lbl" id="rlbl">Needs a gain of</span>
+    <div class="big" id="out">—</div>
+    <p class="detail" id="detail">Enter how far you’re down to see what it takes to get back to even.</p>
+  </section>
+
+  <h2>Common drawdowns</h2>
+  <div class="grid" id="grid"></div>
+
+  <p class="note">Gain needed = loss ÷ (100 − loss). The deeper the hole, the steeper the climb, because the gain applies to a smaller balance.</p>
+</main>
+
+<script>
+(function () {
+  var input = document.getElementById('down');
+  var result = document.getElementById('result');
+  var out = document.getElementById('out');
+  var detail = document.getElementById('detail');
+  var rlbl = document.getElementById('rlbl');
+  var chips = document.getElementById('chips');
+  var grid = document.getElementById('grid');
+
+  function fmt(n, d) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function need(d) { return d / (100 - d) * 100; }
+
+  var quick = [5, 10, 15, 20, 25, 30, 50, 75];
+  var table = [5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90];
+
+  quick.forEach(function (v) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = v + '%';
+    b.addEventListener('click', function () { setVal(v); });
+    chips.appendChild(b);
+  });
+
+  var cells = {};
+  table.forEach(function (v) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'cell';
+    b.innerHTML = '<span class="d">−' + v + '%</span><span class="g">+' + fmt(need(v), 2) + '%</span>';
+    b.addEventListener('click', function () { setVal(v); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    grid.appendChild(b);
+    cells[v] = b;
+  });
+
+  function setVal(v) {
+    input.value = String(v);
+    update();
+  }
+
+  function setState(cls) { result.className = 'result' + (cls ? ' ' + cls : ''); }
+
+  function update() {
+    var clean = input.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+    var parts = clean.split('.');
+    if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
+    if (clean !== input.value) input.value = clean;
+
+    Object.keys(cells).forEach(function (k) { cells[k].classList.remove('on'); });
+
+    var d = parseFloat(clean);
+    rlbl.textContent = 'Needs a gain of';
+
+    if (clean === '' || isNaN(d) || d <= 0) {
+      setState('idle');
+      out.textContent = '—';
+      detail.textContent = 'Enter how far you’re down to see what it takes to get back to even.';
+      return;
+    }
+    if (d >= 100) {
+      setState('bad');
+      rlbl.textContent = 'No way back';
+      out.textContent = 'Can’t recover';
+      detail.textContent = d === 100
+        ? 'At −100% there’s nothing left to grow. Enter a loss under 100%.'
+        : 'A loss can’t be more than 100% of a position. Enter a number under 100.';
+      return;
+    }
+
+    var g = need(d);
+    setState('');
+    out.textContent = '+' + fmt(g, 2) + '%';
+    detail.textContent = '';
+    if (cells[d]) cells[d].classList.add('on');
+  }
+
+  input.addEventListener('input', update);
+  update();
+})();
+</script>
+</body>
+</html>
